@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { promises as fs } from "fs";
-import path from "path";
 import { generateCertificatePdf, sanitizeFilename, generateCertificateId } from "@/lib/pdf";
-import { resolvePublicPath } from "@/lib/storage";
+import { storage } from "@/lib/storage";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     const pdfBuffer = await generateCertificatePdf({
-      backgroundAbsPath: resolvePublicPath(template.backgroundPath),
+      backgroundUrl: template.backgroundPath,
       pageWidth: template.width,
       pageHeight: template.height,
       logos: JSON.parse(template.logos),
@@ -35,11 +33,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       verifyBaseUrl: req.nextUrl.origin,
     });
 
-    const outDir = path.join(process.cwd(), "public", "uploads", "certificates", cert.projectId);
-    await fs.mkdir(outDir, { recursive: true });
     const filename = `${sanitizeFilename(cert.regNumber)}.pdf`;
-    await fs.writeFile(path.join(outDir, filename), pdfBuffer);
-    const publicPath = `/uploads/certificates/${cert.projectId}/${filename}`;
+    const { url: publicPath } = await storage.saveAt(pdfBuffer, `certificates/${cert.projectId}/${filename}`, "application/pdf");
 
     const updated = await prisma.certificate.update({
       where: { id },

@@ -3,7 +3,7 @@ import fontkit from "@pdf-lib/fontkit";
 import path from "path";
 import { promises as fs } from "fs";
 import QRCode from "qrcode";
-import { resolvePublicPath } from "@/lib/storage";
+import { readStoredFile } from "@/lib/storage";
 import { substitutePlaceholders, applyCaseTransform } from "@/lib/placeholders";
 import { getFontOption } from "@/lib/fonts";
 import type {
@@ -54,11 +54,29 @@ function hexToRgb(hex?: string) {
   return rgb(r, g, b);
 }
 
-async function embedImageAuto(pdfDoc: PDFDocument, absPath: string): Promise<PDFImage> {
-  const bytes = await fs.readFile(absPath);
-  const lower = absPath.toLowerCase();
-  if (lower.endsWith(".png")) return pdfDoc.embedPng(bytes);
-  return pdfDoc.embedJpg(bytes);
+// Uploaded images get unique names and are never rewritten, so their bytes can be cached by URL.
+// This saves re-downloading the same background/logos for every student in a batch.
+const imageBytesCache = new Map<string, Promise<Buffer>>();
+const IMAGE_CACHE_LIMIT = 50;
+
+function loadImageBytes(url: string): Promise<Buffer> {
+  let bytes = imageBytesCache.get(url);
+  if (!bytes) {
+    bytes = readStoredFile(url);
+    bytes.catch(() => imageBytesCache.delete(url));
+    if (imageBytesCache.size >= IMAGE_CACHE_LIMIT) {
+      imageBytesCache.delete(imageBytesCache.keys().next().value!);
+    }
+    imageBytesCache.set(url, bytes);
+  }
+  return bytes;
+}
+
+async function embedImageAuto(pdfDoc: PDFDocument, url: string): Promise<PDFImage> {
+  const bytes = await loadImageBytes(url);
+  // Sniff the PNG signature rather than trusting the URL's extension.
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  return isPng ? pdfDoc.embedPng(bytes) : pdfDoc.embedJpg(bytes);
 }
 
 // Baseline y that sits the text's descenders on the bottom edge of the box (matches the editor preview).
@@ -77,7 +95,7 @@ function posToRect(position: Position, pageWidth: number, pageHeight: number) {
 }
 
 export interface GenerateCertificateOptions {
-  backgroundAbsPath: string;
+  backgroundUrl: string;
   pageWidth: number;
   pageHeight: number;
   logos: ImageOverlay[];
@@ -98,13 +116,13 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
   const page = pdfDoc.addPage([opts.pageWidth, opts.pageHeight]);
 
   // Background
-  const bgImage = await embedImageAuto(pdfDoc, opts.backgroundAbsPath);
+  const bgImage = await embedImageAuto(pdfDoc, opts.backgroundUrl);
   page.drawImage(bgImage, { x: 0, y: 0, width: opts.pageWidth, height: opts.pageHeight });
 
   // Watermark (drawn early, low opacity, under overlays but above background)
   if (opts.watermark?.enabled && opts.watermark.assetUrl) {
     try {
-      const wmImage = await embedImageAuto(pdfDoc, resolvePublicPath(opts.watermark.assetUrl));
+      const wmImage = await embedImageAuto(pdfDoc, opts.watermark.assetUrl);
       const pos = opts.watermark.position || { x: 0.25, y: 0.25, width: 0.5, height: 0.5 };
       const rect = posToRect(pos, opts.pageWidth, opts.pageHeight);
       page.drawImage(wmImage, { ...rect, opacity: opts.watermark.opacity ?? 0.15 });
@@ -116,7 +134,7 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
   // Logos & seals
   for (const overlay of [...opts.logos, ...opts.seals]) {
     try {
-      const img = await embedImageAuto(pdfDoc, resolvePublicPath(overlay.assetUrl));
+      const img = await embedImageAuto(pdfDoc, overlay.assetUrl);
       const rect = posToRect(overlay.position, opts.pageWidth, opts.pageHeight);
       page.drawImage(img, rect);
     } catch {
@@ -128,7 +146,7 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
   const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
   for (const sig of opts.signatures) {
     try {
-      const img = await embedImageAuto(pdfDoc, resolvePublicPath(sig.assetUrl));
+      const img = await embedImageAuto(pdfDoc, sig.assetUrl);
       const rect = posToRect(sig.position, opts.pageWidth, opts.pageHeight);
       page.drawImage(img, rect);
       const label = `${sig.name}${sig.designation ? " - " + sig.designation : ""}`;

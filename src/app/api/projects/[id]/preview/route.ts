@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateCertificatePdf, generateCertificateId } from "@/lib/pdf";
-import { resolvePublicPath } from "@/lib/storage";
 import { buildRowData } from "@/lib/rowData";
 import type { ParsedRow } from "@/lib/excel";
 
@@ -27,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const template = project.template;
 
   const pdfBuffer = await generateCertificatePdf({
-    backgroundAbsPath: resolvePublicPath(template.backgroundPath),
+    backgroundUrl: template.backgroundPath,
     pageWidth: template.width,
     pageHeight: template.height,
     logos: JSON.parse(template.logos),

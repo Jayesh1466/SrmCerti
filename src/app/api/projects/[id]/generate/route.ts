@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
-import { promises as fs } from "fs";
-import path from "path";
 import { generateCertificatePdf, sanitizeFilename, generateCertificateId } from "@/lib/pdf";
-import { resolvePublicPath } from "@/lib/storage";
+import { storage } from "@/lib/storage";
 import { buildRowData } from "@/lib/rowData";
 import type { ParsedRow } from "@/lib/excel";
+
+// Upper bound for a generation batch on Vercel (seconds).
+export const maxDuration = 300;
 
 async function runGeneration(jobId: string, projectId: string, verifyBaseUrl: string) {
   const project = await prisma.certificateProject.findUnique({
@@ -29,10 +30,6 @@ async function runGeneration(jobId: string, projectId: string, verifyBaseUrl: st
     .map((row, idx) => ({ row, idx }))
     .filter(({ idx }) => !errorRowIndexes.has(idx));
 
-  const outDir = path.join(process.cwd(), "public", "uploads", "certificates", projectId);
-  await fs.mkdir(outDir, { recursive: true });
-
-  const bgAbsPath = resolvePublicPath(template.backgroundPath);
 
   let completed = 0;
   let failed = 0;
@@ -45,7 +42,7 @@ async function runGeneration(jobId: string, projectId: string, verifyBaseUrl: st
 
     try {
       const pdfBuffer = await generateCertificatePdf({
-        backgroundAbsPath: bgAbsPath,
+        backgroundUrl: template.backgroundPath,
         pageWidth: template.width,
         pageHeight: template.height,
         logos: JSON.parse(template.logos),
@@ -62,9 +59,7 @@ async function runGeneration(jobId: string, projectId: string, verifyBaseUrl: st
       });
 
       const filename = `${sanitizeFilename(regNumber)}.pdf`;
-      const filePath = path.join(outDir, filename);
-      await fs.writeFile(filePath, pdfBuffer);
-      const publicPath = `/uploads/certificates/${projectId}/${filename}`;
+      const { url: publicPath } = await storage.saveAt(pdfBuffer, `certificates/${projectId}/${filename}`, "application/pdf");
 
       await prisma.certificate.create({
         data: {
@@ -133,12 +128,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const origin = req.nextUrl.origin;
 
-  // Fire-and-forget: the for-loop runs in the background of this Node process;
-  // the client polls GET /api/projects/[id]/jobs/[jobId] for progress.
-  runGeneration(job.id, id, origin).catch(async (err) => {
-    console.error("Generation failed", err);
-    await prisma.generationJob.update({ where: { id: job.id }, data: { status: "failed" } });
-  });
+  // Runs after the response is sent; after() keeps a serverless function alive until it finishes
+  // (bounded by maxDuration). The client polls GET /api/projects/[id]/jobs/[jobId] for progress.
+  after(() =>
+    runGeneration(job.id, id, origin).catch(async (err) => {
+      console.error("Generation failed", err);
+      await prisma.generationJob.update({ where: { id: job.id }, data: { status: "failed" } });
+    })
+  );
 
   return NextResponse.json({ jobId: job.id, total });
 }

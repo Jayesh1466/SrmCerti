@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ZipArchive } from "archiver";
-import { resolvePublicPath } from "@/lib/storage";
+import { readStoredFile } from "@/lib/storage";
 import { PassThrough } from "stream";
-import { promises as fs } from "fs";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,9 +23,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   (async () => {
     for (const cert of certificates) {
       if (!cert.filePath) continue;
-      const absPath = resolvePublicPath(cert.filePath);
       try {
-        const buf = await fs.readFile(absPath);
+        const buf = await readStoredFile(cert.filePath);
         archive.append(buf, { name: `${cert.regNumber.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf` });
       } catch {
         // skip unreadable file

@@ -12,8 +12,8 @@ Core principle: **ONE TEMPLATE → MANY STUDENTS → AUTOMATIC CERTIFICATES.**
 ```bash
 cd certiflow
 npm install
-npx prisma migrate dev   # creates dev.db and applies schema (also runs seed)
-npx prisma db seed       # re-run any time to (re-)seed the admin user
+npx prisma migrate deploy   # applies the schema to the Postgres database in DATABASE_URL
+npx prisma db seed          # re-run any time to (re-)seed the admin user
 npm run dev              # http://localhost:3000
 ```
 
@@ -21,13 +21,18 @@ Convenience aliases are also defined in package.json: `npm run migrate`, `npm ru
 
 ## 3. Environment variables
 
-Copy `.env.example` to `.env` (a working `.env` is already included for local dev):
+Copy `.env.example` to `.env` and fill it in. The database is Postgres — a free [Neon](https://neon.tech) database works for both local dev and production.
 
-```
-DATABASE_URL="file:./dev.db"
-NEXTAUTH_SECRET="a-long-random-string"
-NEXTAUTH_URL="http://localhost:3000"
-```
+Without `BLOB_READ_WRITE_TOKEN`, uploads and generated PDFs are stored in `public/uploads` (local dev). With it, they go to Vercel Blob.
+
+## 3a. Deploying to Vercel
+
+1. In Vercel, **Add New → Project** and import this GitHub repository.
+2. In the project's **Storage** tab, add a **Neon** Postgres database and a **Blob** store and connect both to the project. This sets `DATABASE_URL`, `DATABASE_URL_UNPOOLED` and `BLOB_READ_WRITE_TOKEN`.
+3. Under **Settings → Environment Variables**, add `AUTH_SECRET`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+4. Deploy. The `vercel-build` script runs migrations and seeds the admin user before `next build`.
+
+Notes: uploads go through a serverless function, so each file must be under 4.5 MB. Bulk generation runs via `after()` with `maxDuration = 300`, so a single batch must finish within 5 minutes.
 
 ## 4. Test admin login
 
@@ -88,8 +93,8 @@ The full flow was exercised end-to-end against the running dev server with a scr
 
 - **No template versioning** — saving/editing a template overwrites its config; there's no history or diffing.
 - **No undo/redo** in the wizard/canvas editor.
-- **Local filesystem storage only.** `src/lib/storage.ts` defines a `StorageProvider` interface with a `LocalStorageProvider` implementation; swapping in S3/cloud storage means implementing the same interface, no application code changes required elsewhere.
-- **No background job queue / Redis.** Bulk generation runs as an in-process `for` loop inside the Next.js route handler, tracked via a `GenerationJob` row that the frontend polls. This is fine for MVP-scale batches (tens to low hundreds of students) but will block the Node process for very large datasets and won't survive a server restart mid-run.
+- **Storage.** `src/lib/storage.ts` uses Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set and local disk (`public/uploads`) otherwise.
+- **No background job queue / Redis.** Bulk generation runs as an in-process `for` loop inside the Next.js route handler (kept alive with `after()`), tracked via a `GenerationJob` row that the frontend polls. This is fine for MVP-scale batches (tens to low hundreds of students) but will block the Node process for very large datasets and won't survive a server restart mid-run.
 - **No custom font embedding.** PDF generation uses `pdf-lib`'s built-in `StandardFonts` only (Helvetica, Times-Roman, Courier) — no embedding of custom `.ttf`/`.otf` files, so non-Latin scripts or brand fonts aren't supported yet.
 - **No layers panel** in the canvas editor — overlays are edited one at a time via the step forms plus click-to-select on canvas, not a full z-order/layers UI.
 - **Single admin, no multi-admin/org accounts.** One seeded admin user; no roles, invitations, or per-organization data isolation.
