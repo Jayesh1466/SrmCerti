@@ -23,6 +23,8 @@ Convenience aliases are also defined in package.json: `npm run migrate`, `npm ru
 
 Copy `.env.example` to `.env` and fill it in. The database is Postgres — a free [Neon](https://neon.tech) database works for both local dev and production.
 
+For a zero-setup local database, run `npx prisma dev -d --name srmcerti` (restart later with `npx prisma dev start srmcerti`). It prints a `postgres://…` URL; use it for `DATABASE_URL_UNPOOLED`, and for `DATABASE_URL` append `&connection_limit=1&pgbouncer=true` (this embedded Postgres allows only one session and no prepared statements).
+
 Without `BLOB_READ_WRITE_TOKEN`, uploads and generated PDFs are stored in `public/uploads` (local dev). With it, they go to Vercel Blob.
 
 ## 3a. Deploying to Vercel
