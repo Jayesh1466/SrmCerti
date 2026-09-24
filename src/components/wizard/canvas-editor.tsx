@@ -17,6 +17,7 @@ export interface EditableItem {
   fontSize?: number;
   fontColor?: string;
   fontFamily?: string;
+  align?: "left" | "center" | "right";
   verticalAlign?: "top" | "middle" | "bottom";
 }
 
@@ -132,7 +133,7 @@ function EditableNode({
             fontSize={(item.fontSize || 24) * displayScale}
             fontFamily={item.fontFamily || "Arial"}
             fill={item.fontColor || "#000"}
-            align="center"
+            align={item.align || "center"}
             verticalAlign={item.verticalAlign || "middle"}
             listening={false}
           />

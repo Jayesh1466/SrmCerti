@@ -56,6 +56,7 @@ export function NameFieldSettings({
         fontSize: studentNameField.fontSize,
         fontColor: studentNameField.color,
         fontFamily: getFontOption(studentNameField.fontFamily).cssFamily,
+        align: "left",
         verticalAlign: "bottom",
       });
     }
@@ -69,6 +70,7 @@ export function NameFieldSettings({
         fontSize: regNumberField.fontSize,
         fontColor: regNumberField.color,
         fontFamily: getFontOption(regNumberField.fontFamily).cssFamily,
+        align: "left",
         verticalAlign: "bottom",
       });
     }

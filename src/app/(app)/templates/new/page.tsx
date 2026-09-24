@@ -126,6 +126,7 @@ export default function NewTemplatePage() {
         fontSize: studentNameField.fontSize,
         fontColor: studentNameField.color,
         fontFamily: getFontOption(studentNameField.fontFamily).cssFamily,
+        align: "left",
         verticalAlign: "bottom",
       });
     }
@@ -139,10 +140,11 @@ export default function NewTemplatePage() {
         fontSize: regNumberField.fontSize,
         fontColor: regNumberField.color,
         fontFamily: getFontOption(regNumberField.fontFamily).cssFamily,
+        align: "left",
         verticalAlign: "bottom",
       });
     }
-    textBlocks.forEach((t) => items.push({ id: t.id, label: "Text block", position: t.position, kind: "text", textPreview: renderPreviewText(t.content), fontSize: t.fontSize, fontColor: t.color }));
+    textBlocks.forEach((t) => items.push({ id: t.id, label: "Text block", position: t.position, kind: "text", textPreview: renderPreviewText(t.content), fontSize: t.fontSize, fontColor: t.color, align: t.align }));
     if (watermark.enabled && watermark.assetUrl && watermark.position) {
       items.push({ id: "watermark", label: "Watermark", position: watermark.position, kind: "image", imageUrl: watermark.assetUrl });
     }

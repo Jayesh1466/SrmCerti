@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { GenerationPanel } from "@/components/templates/generation-panel";
 import { NameFieldSettings } from "@/components/templates/name-field-settings";
+import { DeleteTemplateButton } from "@/components/templates/delete-template-button";
 
 export default async function TemplateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,7 +38,10 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">{template.name}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-slate-900">{template.name}</h1>
+        <DeleteTemplateButton templateId={template.id} templateName={template.name} redirectTo="/templates" />
+      </div>
       <div className="grid grid-cols-2 gap-6">
         <Card>
           <CardContent className="p-4">

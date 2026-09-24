@@ -134,7 +134,7 @@ export default function AssetsPage() {
               <button
                 onClick={() => setConfirmId(a.id)}
                 title="Delete asset"
-                className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-red-600 opacity-0 shadow transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-red-600 opacity-70 shadow transition-opacity hover:bg-red-50 group-hover:opacity-100"
               >
                 ✕
               </button>

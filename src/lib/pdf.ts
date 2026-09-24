@@ -169,9 +169,8 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
     const rect = posToRect(opts.studentNameField.position, opts.pageWidth, opts.pageHeight);
     const text = applyCaseTransform(opts.data.student_name || "", opts.studentNameField.caseTransform);
     const fontSize = opts.studentNameField.fontSize || 24;
-    const textWidth = font.widthOfTextAtSize(text, fontSize);
     page.drawText(text, {
-      x: rect.x + Math.max(0, (rect.width - textWidth) / 2),
+      x: rect.x,
       y: bottomBaseline(font, fontSize, rect.y),
       size: fontSize,
       font,
@@ -186,9 +185,8 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
     const format = opts.regNumberField.format || "{{registration_number}}";
     const text = substitutePlaceholders(format, opts.data);
     const fontSize = opts.regNumberField.fontSize || 12;
-    const textWidth = font.widthOfTextAtSize(text, fontSize);
     page.drawText(text, {
-      x: rect.x + Math.max(0, (rect.width - textWidth) / 2),
+      x: rect.x,
       y: bottomBaseline(font, fontSize, rect.y),
       size: fontSize,
       font,
