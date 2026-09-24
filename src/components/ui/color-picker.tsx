@@ -37,6 +37,8 @@ export function ColorPicker({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Open the palette leftwards when there isn't room to its right, so it never gets clipped.
+  const [alignRight, setAlignRight] = useState(false);
   const [hexInput, setHexInput] = useState(value || "#000000");
   const [eyeDropperSupported, setEyeDropperSupported] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +80,11 @@ export function ColorPicker({
     <div ref={containerRef} className={cn("relative inline-block", className)}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect) setAlignRight(rect.left + 240 > window.innerWidth);
+          setOpen((o) => !o);
+        }}
         title={value}
         className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white shadow-sm hover:border-slate-400"
       >
@@ -86,7 +92,7 @@ export function ColorPicker({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-2 w-56 rounded-md border border-slate-200 bg-white p-3 shadow-lg">
+        <div className={cn("absolute z-20 mt-2 w-56 rounded-md border border-slate-200 bg-white p-3 shadow-lg", alignRight ? "right-0" : "left-0")}>
           <div className="mb-3 grid grid-cols-5 gap-2">
             {PRESET_COLORS.map((c) => (
               <button

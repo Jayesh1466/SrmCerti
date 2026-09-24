@@ -61,6 +61,12 @@ async function embedImageAuto(pdfDoc: PDFDocument, absPath: string): Promise<PDF
   return pdfDoc.embedJpg(bytes);
 }
 
+// Baseline y that sits the text's descenders on the bottom edge of the box (matches the editor preview).
+function bottomBaseline(font: PDFFont, fontSize: number, rectY: number) {
+  const descent = font.heightAtSize(fontSize) - font.heightAtSize(fontSize, { descender: false });
+  return rectY + descent;
+}
+
 function posToRect(position: Position, pageWidth: number, pageHeight: number) {
   // Normalized coords have origin top-left; PDF origin is bottom-left.
   const width = position.width * pageWidth;
@@ -148,7 +154,7 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
     const textWidth = font.widthOfTextAtSize(text, fontSize);
     page.drawText(text, {
       x: rect.x + Math.max(0, (rect.width - textWidth) / 2),
-      y: rect.y + rect.height / 2 - fontSize / 3,
+      y: bottomBaseline(font, fontSize, rect.y),
       size: fontSize,
       font,
       color: hexToRgb(opts.studentNameField.color || "#000000"),
@@ -165,7 +171,7 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
     const textWidth = font.widthOfTextAtSize(text, fontSize);
     page.drawText(text, {
       x: rect.x + Math.max(0, (rect.width - textWidth) / 2),
-      y: rect.y + rect.height / 2 - fontSize / 3,
+      y: bottomBaseline(font, fontSize, rect.y),
       size: fontSize,
       font,
       color: hexToRgb(opts.regNumberField.color || "#000000"),

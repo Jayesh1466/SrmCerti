@@ -126,6 +126,7 @@ export default function NewTemplatePage() {
         fontSize: studentNameField.fontSize,
         fontColor: studentNameField.color,
         fontFamily: getFontOption(studentNameField.fontFamily).cssFamily,
+        verticalAlign: "bottom",
       });
     }
     if (regNumberField.enabled) {
@@ -138,6 +139,7 @@ export default function NewTemplatePage() {
         fontSize: regNumberField.fontSize,
         fontColor: regNumberField.color,
         fontFamily: getFontOption(regNumberField.fontFamily).cssFamily,
+        verticalAlign: "bottom",
       });
     }
     textBlocks.forEach((t) => items.push({ id: t.id, label: "Text block", position: t.position, kind: "text", textPreview: renderPreviewText(t.content), fontSize: t.fontSize, fontColor: t.color }));
@@ -450,6 +452,12 @@ export default function NewTemplatePage() {
                 <Button onClick={handleSave} disabled={saving || !bg || !name}>
                   {saving ? "Saving..." : "Save Template"}
                 </Button>
+                {(!bg || !name) && (
+                  <p className="text-xs text-amber-600">
+                    To save, {[!name && "enter a template name", !bg && "upload a background image"].filter(Boolean).join(" and ")} in{" "}
+                    <button className="underline" onClick={() => setStep(0)}>Step 1</button>.
+                  </p>
+                )}
               </div>
             )}
 

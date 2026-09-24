@@ -17,6 +17,7 @@ export interface EditableItem {
   fontSize?: number;
   fontColor?: string;
   fontFamily?: string;
+  verticalAlign?: "top" | "middle" | "bottom";
 }
 
 interface Props {
@@ -132,7 +133,7 @@ function EditableNode({
             fontFamily={item.fontFamily || "Arial"}
             fill={item.fontColor || "#000"}
             align="center"
-            verticalAlign="middle"
+            verticalAlign={item.verticalAlign || "middle"}
             listening={false}
           />
         </>

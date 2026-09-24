@@ -56,6 +56,7 @@ export function NameFieldSettings({
         fontSize: studentNameField.fontSize,
         fontColor: studentNameField.color,
         fontFamily: getFontOption(studentNameField.fontFamily).cssFamily,
+        verticalAlign: "bottom",
       });
     }
     if (regNumberField.enabled) {
@@ -68,6 +69,7 @@ export function NameFieldSettings({
         fontSize: regNumberField.fontSize,
         fontColor: regNumberField.color,
         fontFamily: getFontOption(regNumberField.fontFamily).cssFamily,
+        verticalAlign: "bottom",
       });
     }
     if (qrConfig.enabled) {
@@ -128,39 +130,44 @@ export function NameFieldSettings({
             Show student name on certificate
           </label>
           {studentNameField.enabled && (
-            <div className="ml-6 flex flex-wrap items-center gap-3">
-              <label className="text-xs text-slate-600">Font:</label>
-              <select
-                className="rounded border border-slate-300 px-2 py-1 text-sm"
-                value={studentNameField.fontFamily || "Helvetica"}
-                onChange={(e) => setStudentNameField((f) => ({ ...f, fontFamily: e.target.value }))}
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-              <label className="text-xs text-slate-600">Case:</label>
-              <select
-                className="rounded border border-slate-300 px-2 py-1 text-sm"
-                value={studentNameField.caseTransform || "none"}
-                onChange={(e) => setStudentNameField((f) => ({ ...f, caseTransform: e.target.value as TextFieldConfig["caseTransform"] }))}
-              >
-                <option value="none">As-is</option>
-                <option value="upper">UPPERCASE</option>
-                <option value="lower">lowercase</option>
-                <option value="title">Title Case</option>
-              </select>
-              <Input
-                type="number"
-                className="w-20"
-                value={studentNameField.fontSize}
-                onChange={(e) => setStudentNameField((f) => ({ ...f, fontSize: Number(e.target.value) }))}
-                title="Font size"
-              />
-              <ColorPicker
-                value={studentNameField.color}
-                onChange={(hex) => setStudentNameField((f) => ({ ...f, color: hex }))}
-              />
+            <div className={FIELD_GRID}>
+              <Field label="Font">
+                <select
+                  className={SELECT_CLASS}
+                  value={studentNameField.fontFamily || "Helvetica"}
+                  onChange={(e) => setStudentNameField((f) => ({ ...f, fontFamily: e.target.value }))}
+                >
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Size">
+                <Input
+                  type="number"
+                  className="h-9 w-full"
+                  value={studentNameField.fontSize}
+                  onChange={(e) => setStudentNameField((f) => ({ ...f, fontSize: Number(e.target.value) }))}
+                />
+              </Field>
+              <Field label="Color">
+                <ColorPicker
+                  value={studentNameField.color}
+                  onChange={(hex) => setStudentNameField((f) => ({ ...f, color: hex }))}
+                />
+              </Field>
+              <Field label="Case">
+                <select
+                  className={SELECT_CLASS}
+                  value={studentNameField.caseTransform || "none"}
+                  onChange={(e) => setStudentNameField((f) => ({ ...f, caseTransform: e.target.value as TextFieldConfig["caseTransform"] }))}
+                >
+                  <option value="none">As-is</option>
+                  <option value="upper">UPPERCASE</option>
+                  <option value="lower">lowercase</option>
+                  <option value="title">Title Case</option>
+                </select>
+              </Field>
             </div>
           )}
         </div>
@@ -175,36 +182,40 @@ export function NameFieldSettings({
             Show registration number on certificate
           </label>
           {regNumberField.enabled && (
-            <div className="ml-6 flex flex-wrap items-center gap-3">
-              <label className="text-xs text-slate-600">Format:</label>
-              <Input
-                className="w-56"
-                value={regNumberField.format || ""}
-                onChange={(e) => setRegNumberField((f) => ({ ...f, format: e.target.value }))}
-                placeholder="({{registration_number}})"
-              />
-              <label className="text-xs text-slate-600">Font:</label>
-              <select
-                className="rounded border border-slate-300 px-2 py-1 text-sm"
-                value={regNumberField.fontFamily || "Helvetica"}
-                onChange={(e) => setRegNumberField((f) => ({ ...f, fontFamily: e.target.value }))}
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-              <label className="text-xs text-slate-600">Font size:</label>
-              <Input
-                type="number"
-                className="w-20"
-                value={regNumberField.fontSize}
-                onChange={(e) => setRegNumberField((f) => ({ ...f, fontSize: Number(e.target.value) }))}
-                title="Font size"
-              />
-              <ColorPicker
-                value={regNumberField.color}
-                onChange={(hex) => setRegNumberField((f) => ({ ...f, color: hex }))}
-              />
+            <div className={FIELD_GRID}>
+              <Field label="Format" className="col-span-3">
+                <Input
+                  className="h-9 w-full"
+                  value={regNumberField.format || ""}
+                  onChange={(e) => setRegNumberField((f) => ({ ...f, format: e.target.value }))}
+                  placeholder="({{registration_number}})"
+                />
+              </Field>
+              <Field label="Font">
+                <select
+                  className={SELECT_CLASS}
+                  value={regNumberField.fontFamily || "Helvetica"}
+                  onChange={(e) => setRegNumberField((f) => ({ ...f, fontFamily: e.target.value }))}
+                >
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Size">
+                <Input
+                  type="number"
+                  className="h-9 w-full"
+                  value={regNumberField.fontSize}
+                  onChange={(e) => setRegNumberField((f) => ({ ...f, fontSize: Number(e.target.value) }))}
+                />
+              </Field>
+              <Field label="Color">
+                <ColorPicker
+                  value={regNumberField.color}
+                  onChange={(hex) => setRegNumberField((f) => ({ ...f, color: hex }))}
+                />
+              </Field>
             </div>
           )}
         </div>
@@ -255,5 +266,18 @@ export function NameFieldSettings({
       </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Shared column layout so Font / Size / Color line up across every field group.
+const FIELD_GRID = "ml-6 grid grid-cols-[minmax(0,1fr)_5rem_auto] items-end gap-x-3 gap-y-3";
+const SELECT_CLASS = "h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm";
+
+function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div className={className}>
+      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+      {children}
+    </div>
   );
 }
