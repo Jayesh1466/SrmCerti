@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { promises as fs } from "fs";
+import path from "path";
+import { generateCertificatePdf, sanitizeFilename, generateCertificateId } from "@/lib/pdf";
+import { resolvePublicPath } from "@/lib/storage";
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const cert = await prisma.certificate.findUnique({
+    where: { id },
+    include: { project: { include: { template: true } } },
+  });
+  if (!cert) return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
+
+  const template = cert.project.template;
+  const data = JSON.parse(cert.data || "{}");
+  const certificateId = cert.certificateId || generateCertificateId();
+
+  try {
+    const pdfBuffer = await generateCertificatePdf({
+      backgroundAbsPath: resolvePublicPath(template.backgroundPath),
+      pageWidth: template.width,
+      pageHeight: template.height,
+      logos: JSON.parse(template.logos),
+      seals: JSON.parse(template.seals),
+      signatures: JSON.parse(template.signatures),
+      studentNameField: JSON.parse(template.studentNameField),
+      regNumberField: JSON.parse(template.regNumberField),
+      textBlocks: JSON.parse(template.textBlocks),
+      watermark: JSON.parse(template.watermark),
+      qrConfig: JSON.parse(template.qrConfig),
+      data,
+      certificateId,
+      verifyBaseUrl: req.nextUrl.origin,
+    });
+
+    const outDir = path.join(process.cwd(), "public", "uploads", "certificates", cert.projectId);
+    await fs.mkdir(outDir, { recursive: true });
+    const filename = `${sanitizeFilename(cert.regNumber)}.pdf`;
+    await fs.writeFile(path.join(outDir, filename), pdfBuffer);
+    const publicPath = `/uploads/certificates/${cert.projectId}/${filename}`;
+
+    const updated = await prisma.certificate.update({
+      where: { id },
+      data: { filePath: publicPath, status: "generated" },
+    });
+    return NextResponse.json(updated);
+  } catch (err) {
+    await prisma.certificate.update({ where: { id }, data: { status: "failed" } });
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}

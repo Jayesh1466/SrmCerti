@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  type      String // logo | seal | signature | watermark | background
+  name      String
+  filePath  String
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+}
+
+model Template {
+  id             String   @id @default(cuid())
+  name           String
+  backgroundPath String
+  width          Int
+  height         Int
+  orientation    String // landscape | portrait
+  logos          String   @default("[]") // JSON
+  seals          String   @default("[]") // JSON
+  signatures     String   @default("[]") // JSON
+  studentNameField String @default("{}") // JSON
+  regNumberField String   @default("{}") // JSON
+  textBlocks     String   @default("[]") // JSON
+  watermark      String   @default("{}") // JSON
+  qrConfig       String   @default("{}") // JSON
+  status         String   @default("draft") // draft | complete
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  projects       CertificateProject[]
+}
+
+model CertificateProject {
+  id           String   @id @default(cuid())
+  name         String
+  templateId   String   @unique
+  template     Template @relation(fields: [templateId], references: [id])
+  status       String   @default("draft") // draft | ready | generating | completed | failed
+  columnMapping String  @default("{}") // JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  datasets     StudentDataset[]
+  certificates Certificate[]
+  jobs         GenerationJob[]
+}
+
+model StudentDataset {
+  id        String   @id @default(cuid())
+  projectId String
+  project   CertificateProject @relation(fields: [projectId], references: [id])
+  rows      String // JSON array of row objects
+  errors    String   @default("[]") // JSON array of validation errors
+  createdAt DateTime @default(now())
+}
+
+model Certificate {
+  id            String   @id @default(cuid())
+  certificateId String   @unique // CERT-xxxx
+  projectId     String
+  project       CertificateProject @relation(fields: [projectId], references: [id])
+  studentName   String
+  regNumber     String
+  data          String   @default("{}") // JSON of all fields used
+  filePath      String?
+  status        String   @default("pending") // pending | generated | failed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model GenerationJob {
+  id        String   @id @default(cuid())
+  projectId String
+  project   CertificateProject @relation(fields: [projectId], references: [id])
+  total     Int      @default(0)
+  completed Int      @default(0)
+  failed    Int      @default(0)
+  status    String   @default("pending") // pending | running | completed | failed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
