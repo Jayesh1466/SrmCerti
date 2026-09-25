@@ -10,7 +10,14 @@ export async function POST(req: NextRequest) {
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const { url, filePath } = await storage.save(buffer, subdir, file.name);
+  let url: string;
+  let filePath: string;
+  try {
+    ({ url, filePath } = await storage.save(buffer, subdir, file.name));
+  } catch (err) {
+    console.error("Upload failed", err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Could not store the file" }, { status: 500 });
+  }
 
   let width: number | undefined;
   let height: number | undefined;

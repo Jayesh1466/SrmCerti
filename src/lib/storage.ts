@@ -77,9 +77,27 @@ class BlobStorageProvider implements StorageProvider {
   }
 }
 
+// Vercel's filesystem is read-only, so local storage can't work there; fail with an actionable message instead.
+class MissingBlobStorageProvider implements StorageProvider {
+  private fail(): never {
+    throw new Error(
+      "File storage is not configured: BLOB_READ_WRITE_TOKEN is missing. Connect a Vercel Blob store to this project (with no custom prefix) and redeploy."
+    );
+  }
+  async save(): Promise<{ url: string; filePath: string }> {
+    this.fail();
+  }
+  async saveAt(): Promise<{ url: string }> {
+    this.fail();
+  }
+  async remove() {}
+}
+
 export const storage: StorageProvider = process.env.BLOB_READ_WRITE_TOKEN
   ? new BlobStorageProvider()
-  : new LocalStorageProvider();
+  : process.env.VERCEL
+    ? new MissingBlobStorageProvider()
+    : new LocalStorageProvider();
 
 // Read a stored file's bytes, whichever provider wrote it.
 export async function readStoredFile(url: string): Promise<Buffer> {

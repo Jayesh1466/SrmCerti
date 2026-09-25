@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { uploadFile } from "@/lib/upload-client";
 
 interface Asset {
   id: string;
@@ -36,11 +37,7 @@ export default function AssetsPage() {
   async function handleUpload(file: File) {
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("subdir", `assets/${uploadType}s`);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
+      const data = await uploadFile(file, `assets/${uploadType}s`);
       await fetch("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,6 +51,8 @@ export default function AssetsPage() {
       });
       setUploadName("");
       load();
+    } catch (err) {
+      alert(`Upload failed: ${(err as Error).message}`);
     } finally {
       setUploading(false);
     }

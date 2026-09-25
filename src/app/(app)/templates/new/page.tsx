@@ -8,6 +8,7 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { CanvasEditor, EditableItem } from "@/components/wizard/canvas-editor";
 import { FONT_OPTIONS, getFontOption } from "@/lib/fonts";
+import { uploadFile } from "@/lib/upload-client";
 import type {
   ImageOverlay,
   SignatureOverlay,
@@ -165,23 +166,14 @@ export default function NewTemplatePage() {
     setTextBlocks((prev) => prev.map((t) => (t.id === id ? { ...t, position: pos } : t)));
   }
 
-  async function uploadFile(file: File, subdir: string) {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("subdir", subdir);
-    const res = await fetch("/api/upload", { method: "POST", body: form });
-    if (!res.ok) throw new Error("Upload failed");
-    return res.json();
-  }
-
   async function handleBgUpload(file: File) {
     setUploading(true);
     setError(null);
     try {
       const data = await uploadFile(file, "templates");
       setBg({ url: data.url, width: data.width || 1600, height: data.height || 1131, orientation: data.orientation || "landscape" });
-    } catch {
-      setError("Failed to upload background image");
+    } catch (err) {
+      setError(`Failed to upload background image: ${(err as Error).message}`);
     } finally {
       setUploading(false);
     }
@@ -202,8 +194,8 @@ export default function NewTemplatePage() {
       if (kind === "logo") setLogos((p) => arrangeLogosTopRow([...p, base]));
       if (kind === "seal") setSeals((p) => [...p, base]);
       if (kind === "signature") setSignatures((p) => [...p, { ...base, designation: "" }]);
-    } catch {
-      setError("Upload failed");
+    } catch (err) {
+      setError(`Upload failed: ${(err as Error).message}`);
     } finally {
       setUploading(false);
     }
@@ -211,9 +203,12 @@ export default function NewTemplatePage() {
 
   async function handleWatermarkUpload(file: File) {
     setUploading(true);
+    setError(null);
     try {
       const data = await uploadFile(file, "assets/watermarks");
       setWatermark((w) => ({ ...w, assetUrl: data.url, position: w.position || { x: 0.25, y: 0.25, width: 0.5, height: 0.5 } }));
+    } catch (err) {
+      setError(`Failed to upload watermark: ${(err as Error).message}`);
     } finally {
       setUploading(false);
     }
