@@ -14,7 +14,8 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    // When ADMIN_PASSWORD is set explicitly, (re)apply it so changing it in Vercel takes effect on the next deploy.
+    update: process.env.ADMIN_PASSWORD ? { passwordHash } : {},
     create: {
       email: adminEmail,
       passwordHash,

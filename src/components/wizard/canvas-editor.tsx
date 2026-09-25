@@ -37,7 +37,8 @@ function useImage(url: string | undefined) {
   useEffect(() => {
     if (!url) return;
     const image = new window.Image();
-    image.crossOrigin = "anonymous";
+    // No crossOrigin: the canvas is never exported, and requesting CORS would make images
+    // from a storage host without CORS headers (e.g. Blob CDN) fail to load at all.
     image.src = url;
     image.onload = () => setImg(image);
   }, [url]);

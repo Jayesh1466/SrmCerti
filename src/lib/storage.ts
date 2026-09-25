@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { put, del } from "@vercel/blob";
+import { put, del, get, BlobError } from "@vercel/blob";
 
 // Storage provider interface. Files are addressed by the URL returned from save/saveAt:
 // a "/uploads/..." path for local disk, or an absolute https URL for Vercel Blob.
@@ -58,8 +58,15 @@ function findBlobToken(): string | undefined {
 
 const blobToken = findBlobToken();
 
+// Files in a private Blob store aren't reachable by URL, so they're served through this signed-in app route.
+export const PRIVATE_FILE_ROUTE = "/api/files/";
+
 // Vercel Blob: used in production, where the serverless filesystem is read-only and ephemeral.
+// Works with both public and private stores: it tries public first and switches to private
+// if the store rejects public access.
 class BlobStorageProvider implements StorageProvider {
+  private access: "public" | "private" = "public";
+
   constructor(private token: string) {}
 
   async save(buffer: Buffer, subdir: string, originalName: string) {
@@ -68,8 +75,20 @@ class BlobStorageProvider implements StorageProvider {
   }
 
   async saveAt(buffer: Buffer, pathname: string, contentType?: string) {
+    try {
+      return await this.put(buffer, pathname, contentType);
+    } catch (err) {
+      if (this.access === "public" && isAccessMismatch(err)) {
+        this.access = "private";
+        return this.put(buffer, pathname, contentType);
+      }
+      throw err;
+    }
+  }
+
+  private async put(buffer: Buffer, pathname: string, contentType?: string) {
     const blob = await put(pathname, buffer, {
-      access: "public",
+      access: this.access,
       token: this.token,
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -77,17 +96,30 @@ class BlobStorageProvider implements StorageProvider {
       // Regenerated certificates overwrite the same path, so don't let the CDN serve a stale copy for long.
       cacheControlMaxAge: 60,
     });
-    return { url: blob.url };
+    return { url: this.access === "public" ? blob.url : PRIVATE_FILE_ROUTE + blob.pathname };
   }
 
   async remove(url: string) {
-    if (!/^https?:\/\//.test(url)) return;
+    const target = url.startsWith(PRIVATE_FILE_ROUTE) ? url.slice(PRIVATE_FILE_ROUTE.length) : url;
+    if (target === url && !/^https?:\/\//.test(url)) return;
     try {
-      await del(url, { token: this.token });
+      await del(target, { token: this.token });
     } catch {
       // ignore missing blob
     }
   }
+}
+
+// A public put against a private store (or vice versa) comes back as a generic "bad request" that mentions access.
+function isAccessMismatch(err: unknown) {
+  return err instanceof BlobError && err.constructor === BlobError && /access|private|public/i.test(err.message);
+}
+
+// Stream a file from a private Blob store (used by the /api/files route and server-side reads).
+export async function getPrivateBlob(pathname: string) {
+  if (!blobToken) return null;
+  const result = await get(pathname, { access: "private", token: blobToken });
+  return result?.statusCode === 200 ? result : null;
 }
 
 // Vercel's filesystem is read-only, so local storage can't work there; fail with an actionable message instead.
@@ -118,6 +150,11 @@ export const storage: StorageProvider = blobToken
 
 // Read a stored file's bytes, whichever provider wrote it.
 export async function readStoredFile(url: string): Promise<Buffer> {
+  if (url.startsWith(PRIVATE_FILE_ROUTE)) {
+    const result = await getPrivateBlob(url.slice(PRIVATE_FILE_ROUTE.length));
+    if (!result) throw new Error(`Stored file not found: ${url}`);
+    return Buffer.from(await new Response(result.stream).arrayBuffer());
+  }
   if (/^https?:\/\//.test(url)) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);

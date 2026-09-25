@@ -34,7 +34,7 @@ Without `BLOB_READ_WRITE_TOKEN`, uploads and generated PDFs are stored in `publi
 3. Under **Settings → Environment Variables**, add `AUTH_SECRET`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
 4. Deploy. The `vercel-build` script runs migrations and seeds the admin user before `next build`.
 
-Notes: uploads go through a serverless function, so each file must be under 4.5 MB. Bulk generation runs via `after()` with `maxDuration = 300`, so a single batch must finish within 5 minutes.
+Notes: the Blob store can be public or private (private files are served through the signed-in `/api/files/...` route), and a custom env-var prefix on the Blob token is tolerated. Changing `ADMIN_PASSWORD` and redeploying resets the admin password. Uploads go through a serverless function, so each file must be under 4.5 MB. Bulk generation runs via `after()` with `maxDuration = 300`, so a single batch must finish within 5 minutes.
 
 ## 4. Test admin login
 
