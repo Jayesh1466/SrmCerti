@@ -8,7 +8,15 @@ async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@certiflow.com";
   const adminPassword = process.env.ADMIN_PASSWORD || (process.env.VERCEL ? "" : "admin123");
   if (!adminPassword) {
-    throw new Error("ADMIN_PASSWORD must be set to seed the admin user on a deployed environment.");
+    // Don't fail the deploy over this: the app can still ship, it just can't be logged into until an admin exists.
+    const users = await prisma.user.count();
+    console.warn(
+      users > 0
+        ? "ADMIN_PASSWORD is not set; keeping the existing admin account(s) unchanged."
+        : "WARNING: ADMIN_PASSWORD is not set and no admin account exists yet, so nobody can log in. " +
+            "Add ADMIN_EMAIL and ADMIN_PASSWORD in the Vercel project's Environment Variables and redeploy."
+    );
+    return;
   }
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
