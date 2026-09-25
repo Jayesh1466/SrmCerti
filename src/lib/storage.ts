@@ -48,8 +48,20 @@ class LocalStorageProvider implements StorageProvider {
   }
 }
 
+// Vercel's Blob integration names the token BLOB_READ_WRITE_TOKEN, or <PREFIX>_BLOB_READ_WRITE_TOKEN
+// when the store was connected with a custom prefix. Accept either.
+function findBlobToken(): string | undefined {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  const key = Object.keys(process.env).find((k) => k.endsWith("_BLOB_READ_WRITE_TOKEN") && process.env[k]);
+  return key ? process.env[key] : undefined;
+}
+
+const blobToken = findBlobToken();
+
 // Vercel Blob: used in production, where the serverless filesystem is read-only and ephemeral.
 class BlobStorageProvider implements StorageProvider {
+  constructor(private token: string) {}
+
   async save(buffer: Buffer, subdir: string, originalName: string) {
     const { url } = await this.saveAt(buffer, `${subdir}/${uniqueFilename(originalName)}`);
     return { url, filePath: url };
@@ -58,6 +70,7 @@ class BlobStorageProvider implements StorageProvider {
   async saveAt(buffer: Buffer, pathname: string, contentType?: string) {
     const blob = await put(pathname, buffer, {
       access: "public",
+      token: this.token,
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType,
@@ -70,7 +83,7 @@ class BlobStorageProvider implements StorageProvider {
   async remove(url: string) {
     if (!/^https?:\/\//.test(url)) return;
     try {
-      await del(url);
+      await del(url, { token: this.token });
     } catch {
       // ignore missing blob
     }
@@ -80,8 +93,12 @@ class BlobStorageProvider implements StorageProvider {
 // Vercel's filesystem is read-only, so local storage can't work there; fail with an actionable message instead.
 class MissingBlobStorageProvider implements StorageProvider {
   private fail(): never {
+    // Report variable names (never values) so a misconfigured deployment is easy to diagnose.
+    const blobVars = Object.keys(process.env).filter((k) => k.includes("BLOB"));
     throw new Error(
-      "File storage is not configured: BLOB_READ_WRITE_TOKEN is missing. Connect a Vercel Blob store to this project (with no custom prefix) and redeploy."
+      `File storage is not configured: no BLOB_READ_WRITE_TOKEN in the "${process.env.VERCEL_ENV ?? "unknown"}" environment ` +
+        `(Blob-related variables found: ${blobVars.length ? blobVars.join(", ") : "none"}). ` +
+        "Connect a Vercel Blob store to this project for Production and Preview, then redeploy."
     );
   }
   async save(): Promise<{ url: string; filePath: string }> {
@@ -93,8 +110,8 @@ class MissingBlobStorageProvider implements StorageProvider {
   async remove() {}
 }
 
-export const storage: StorageProvider = process.env.BLOB_READ_WRITE_TOKEN
-  ? new BlobStorageProvider()
+export const storage: StorageProvider = blobToken
+  ? new BlobStorageProvider(blobToken)
   : process.env.VERCEL
     ? new MissingBlobStorageProvider()
     : new LocalStorageProvider();
