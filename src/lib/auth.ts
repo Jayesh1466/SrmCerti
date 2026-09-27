@@ -16,7 +16,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
+        const email = (credentials?.email as string | undefined)?.trim().toLowerCase();
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
         const user = await prisma.user.findUnique({ where: { email } });
@@ -29,8 +29,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.uid = user.id;
-      return token;
+      if (user) {
+        token.uid = user.id;
+        return token;
+      }
+      // Sessions are stateless JWTs, so re-check the account still exists; this signs out
+      // anyone whose account was removed (e.g. the demo admin) instead of waiting for expiry.
+      if (!token.uid) return null;
+      const exists = await prisma.user.findUnique({ where: { id: token.uid as string }, select: { id: true } });
+      return exists ? token : null;
     },
     async session({ session, token }) {
       if (session.user && token.uid) (session.user as { id?: string }).id = token.uid as string;

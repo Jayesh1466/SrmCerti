@@ -36,13 +36,12 @@ Without `BLOB_READ_WRITE_TOKEN`, uploads and generated PDFs are stored in `publi
 
 Notes: the Blob store can be public or private (private files are served through the signed-in `/api/files/...` route), and a custom env-var prefix on the Blob token is tolerated. Changing `ADMIN_PASSWORD` and redeploying resets the admin password. Uploads go through a serverless function, so each file must be under 4.5 MB. Bulk generation runs via `after()` with `maxDuration = 300`, so a single batch must finish within 5 minutes.
 
-## 4. Test admin login
+## 4. Admin login
 
-- URL: http://localhost:3000/login
-- Email: `admin@certiflow.com`
-- Password: `admin123`
+- **Local development only:** `admin@certiflow.com` / `admin123` at http://localhost:3000/login.
+- **Deployed (Vercel):** the only admin is the one from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Each deploy removes every other account, including the demo one; the demo password is refused. Changing either variable and redeploying replaces the admin, and removed accounts are signed out immediately.
 
-All of `/dashboard`, `/templates`, `/projects`, `/assets`, `/certificates` are protected by `src/middleware.ts` and redirect to `/login` when unauthenticated. `/login` and `/verify/[certificateId]` are public.
+Pages under `/dashboard`, `/templates`, `/assets`, `/certificates` and `/settings`, and every `/api` route except `/api/auth` and `/api/verify`, require sign-in (enforced in `src/proxy.ts`). `/login` and `/verify/[certificateId]` are public. The session cookie ends when the browser closes (12-hour inactivity backstop).
 
 ## 5. Creating a certificate template (wizard)
 
