@@ -9,8 +9,8 @@ import { CanvasEditor, EditableItem } from "@/components/wizard/canvas-editor";
 import { FONT_OPTIONS, getFontOption } from "@/lib/fonts";
 import type { TextFieldConfig, Position, QrConfig } from "@/lib/types";
 
-const SAMPLE_NAME = "Jayesh D";
-const SAMPLE_REG = "RA2311001";
+const SAMPLE_NAME = "Name";
+const SAMPLE_REG = "RAXXXXXXXXXXXXX";
 const DEFAULT_QR_POSITION: Position = { x: 0.85, y: 0.85, width: 0.1, height: 0.1 };
 
 function applyCaseTransform(text: string, transform?: TextFieldConfig["caseTransform"]): string {
@@ -133,7 +133,7 @@ export function NameFieldSettings({
           </label>
           {studentNameField.enabled && (
             <div className={FIELD_GRID}>
-              <Field label="Font">
+              <Field label="Font" className="min-w-[9rem] flex-1">
                 <select
                   className={SELECT_CLASS}
                   value={studentNameField.fontFamily || "Helvetica"}
@@ -144,7 +144,7 @@ export function NameFieldSettings({
                   ))}
                 </select>
               </Field>
-              <Field label="Size">
+              <Field label="Size" className="w-20">
                 <Input
                   type="number"
                   className="h-9 w-full"
@@ -158,7 +158,7 @@ export function NameFieldSettings({
                   onChange={(hex) => setStudentNameField((f) => ({ ...f, color: hex }))}
                 />
               </Field>
-              <Field label="Case">
+              <Field label="Case" className="min-w-[9rem] flex-1">
                 <select
                   className={SELECT_CLASS}
                   value={studentNameField.caseTransform || "none"}
@@ -185,7 +185,7 @@ export function NameFieldSettings({
           </label>
           {regNumberField.enabled && (
             <div className={FIELD_GRID}>
-              <Field label="Format" className="col-span-3">
+              <Field label="Format" className="basis-full">
                 <Input
                   className="h-9 w-full"
                   value={regNumberField.format || ""}
@@ -193,7 +193,7 @@ export function NameFieldSettings({
                   placeholder="({{registration_number}})"
                 />
               </Field>
-              <Field label="Font">
+              <Field label="Font" className="min-w-[9rem] flex-1">
                 <select
                   className={SELECT_CLASS}
                   value={regNumberField.fontFamily || "Helvetica"}
@@ -204,7 +204,7 @@ export function NameFieldSettings({
                   ))}
                 </select>
               </Field>
-              <Field label="Size">
+              <Field label="Size" className="w-20">
                 <Input
                   type="number"
                   className="h-9 w-full"
@@ -271,8 +271,9 @@ export function NameFieldSettings({
   );
 }
 
-// Shared column layout so Font / Size / Color line up across every field group.
-const FIELD_GRID = "ml-6 grid grid-cols-[minmax(0,1fr)_5rem_auto] items-end gap-x-3 gap-y-3";
+// Font / Size / Color sit on one row and wrap onto the next line when the panel is narrow,
+// instead of squashing the Font column until its label overlaps Size.
+const FIELD_GRID = "ml-6 flex flex-wrap items-end gap-3";
 const SELECT_CLASS = "h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm";
 
 function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {

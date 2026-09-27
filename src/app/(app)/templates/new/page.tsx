@@ -39,8 +39,8 @@ function newId() {
 const DEFAULT_POS: Position = { x: 0.35, y: 0.4, width: 0.3, height: 0.1 };
 
 const SAMPLE_DATA: Record<string, string> = {
-  student_name: "Jayesh D",
-  registration_number: "RA2311001",
+  student_name: "Name",
+  registration_number: "RAXXXXXXXXXXXXX",
   certificate_id: "CERT-SAMPLE-0001",
   event_name: "Sample Event Name",
   date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }),
