@@ -18,6 +18,7 @@ import type {
   QrConfig,
   Position,
 } from "@/lib/types";
+import { GripVertical } from "lucide-react";
 
 const STEPS = [
   "Template",
@@ -262,7 +263,7 @@ export default function NewTemplatePage() {
           <button
             key={label}
             onClick={() => setStep(i)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
+            className={`rounded-md px-3 py-1 text-xs font-medium ${
               i === step ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
@@ -548,10 +549,10 @@ function OverlayStep({
             setOverIndex(null);
           }}
           className={`flex items-center gap-2 rounded border p-2 ${reorderable ? "cursor-grab active:cursor-grabbing" : ""} ${
-            overIndex === index && dragIndex !== null && dragIndex !== index ? "border-indigo-400 bg-indigo-50" : ""
+            overIndex === index && dragIndex !== null && dragIndex !== index ? "border-brand bg-slate-50" : ""
           }`}
         >
-          {reorderable && <span className="select-none text-slate-400" title="Drag to reorder">⠿</span>}
+          {reorderable && <GripVertical size={16} className="shrink-0 text-slate-400" aria-label="Drag to reorder" />}
           <span className="w-5 text-center text-xs font-semibold text-slate-400">{index + 1}</span>
           <img src={item.assetUrl} className="h-10 w-10 object-contain" alt={item.name} />
           <Input value={item.name} onChange={(e) => onRename(item.id, e.target.value)} className="w-40" />

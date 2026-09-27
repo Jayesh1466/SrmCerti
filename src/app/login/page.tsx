@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -40,7 +41,7 @@ function LoginForm() {
         <CardHeader className="flex flex-col items-center text-center">
           <Image src="/brand/srm-logo.png" alt="SRM Institute of Science & Technology" width={220} height={90} priority className="mb-2 h-auto w-full" />
           <p className="whitespace-nowrap text-sm font-bold tracking-wide text-slate-800">SRM CERTIFICATE GENERATOR</p>
-          <p className="text-xs text-slate-500">Bulk Certificate Generator</p>
+          <p className="text-xs text-slate-500">Create, issue and verify SRM event certificates</p>
           <p className="mt-2 text-sm font-bold uppercase text-slate-700">Admin sign in</p>
         </CardHeader>
         <CardContent>
@@ -63,6 +64,10 @@ function LoginForm() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
+            <p className="text-center text-xs text-slate-500">
+              By signing in you agree to the{" "}
+              <Link href="/terms" className="text-brand hover:underline">Terms and Conditions</Link>.
+            </p>
           </form>
         </CardContent>
       </Card>

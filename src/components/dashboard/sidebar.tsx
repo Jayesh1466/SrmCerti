@@ -92,7 +92,7 @@ export function Sidebar() {
           <>
             <Image src="/brand/srm-logo.png" alt="SRM Institute of Science & Technology" width={140} height={57} priority className="h-auto w-32" />
             <p className="mt-3 text-sm font-bold leading-tight tracking-wide text-slate-800">SRM CERTIFICATE GENERATOR</p>
-            <p className="mt-0.5 text-xs text-slate-500">Bulk Certificate Generator</p>
+            <p className="mt-0.5 text-xs text-slate-500">Create, issue and verify certificates</p>
           </>
         )}
       </div>

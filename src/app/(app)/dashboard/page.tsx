@@ -47,7 +47,7 @@ export default async function DashboardPage() {
                     <td className="py-2 font-medium">{t.name}</td>
                     <td>{t.width}x{t.height} ({t.orientation})</td>
                     <td>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
                         {t.status}
                       </span>
                     </td>

@@ -37,7 +37,7 @@ export default async function CertificatesPage() {
                   </td>
                   <td className="font-mono text-xs">{c.certificateId}</td>
                   <td>
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${c.status === "generated" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{c.status}</span>
+                    <span className={`rounded px-2 py-0.5 text-xs ${c.status === "generated" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{c.status}</span>
                   </td>
                   <td className="space-x-3 p-3 text-right">
                     {c.filePath && <a className="text-blue-600 hover:underline" href={c.filePath} target="_blank" rel="noreferrer">Download</a>}

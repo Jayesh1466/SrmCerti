@@ -48,15 +48,24 @@ class LocalStorageProvider implements StorageProvider {
   }
 }
 
-// Vercel's Blob integration names the token BLOB_READ_WRITE_TOKEN, or <PREFIX>_BLOB_READ_WRITE_TOKEN
-// when the store was connected with a custom prefix. Accept either.
-function findBlobToken(): string | undefined {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
-  const key = Object.keys(process.env).find((k) => k.endsWith("_BLOB_READ_WRITE_TOKEN") && process.env[k]);
+// Vercel Blob credentials come in two forms:
+//  - a read-write token (BLOB_READ_WRITE_TOKEN), or
+//  - OIDC: the store is identified by BLOB_STORE_ID and each request carries a short-lived Vercel OIDC
+//    token, which @vercel/blob picks up by itself (newer Vercel Blob connections work this way).
+// Either may carry a custom prefix (<PREFIX>_BLOB_...) if the store was connected with one.
+function findEnv(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  const key = Object.keys(process.env).find((k) => k.endsWith("_" + name) && process.env[k]);
   return key ? process.env[key] : undefined;
 }
 
-const blobToken = findBlobToken();
+const blobAuth = { token: findEnv("BLOB_READ_WRITE_TOKEN"), storeId: findEnv("BLOB_STORE_ID") };
+const hasBlob = !!(blobAuth.token || blobAuth.storeId);
+
+// Only pass what's set: an explicit token wins; otherwise the SDK uses OIDC with the store id.
+function blobOptions() {
+  return blobAuth.token ? { token: blobAuth.token } : { storeId: blobAuth.storeId };
+}
 
 // Files in a private Blob store aren't reachable by URL, so they're served through this signed-in app route.
 export const PRIVATE_FILE_ROUTE = "/api/files/";
@@ -66,8 +75,6 @@ export const PRIVATE_FILE_ROUTE = "/api/files/";
 // if the store rejects public access.
 class BlobStorageProvider implements StorageProvider {
   private access: "public" | "private" = "public";
-
-  constructor(private token: string) {}
 
   async save(buffer: Buffer, subdir: string, originalName: string) {
     const { url } = await this.saveAt(buffer, `${subdir}/${uniqueFilename(originalName)}`);
@@ -89,7 +96,7 @@ class BlobStorageProvider implements StorageProvider {
   private async put(buffer: Buffer, pathname: string, contentType?: string) {
     const blob = await put(pathname, buffer, {
       access: this.access,
-      token: this.token,
+      ...blobOptions(),
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType,
@@ -103,7 +110,7 @@ class BlobStorageProvider implements StorageProvider {
     const target = url.startsWith(PRIVATE_FILE_ROUTE) ? url.slice(PRIVATE_FILE_ROUTE.length) : url;
     if (target === url && !/^https?:\/\//.test(url)) return;
     try {
-      await del(target, { token: this.token });
+      await del(target, blobOptions());
     } catch {
       // ignore missing blob
     }
@@ -117,8 +124,8 @@ function isAccessMismatch(err: unknown) {
 
 // Stream a file from a private Blob store (used by the /api/files route and server-side reads).
 export async function getPrivateBlob(pathname: string) {
-  if (!blobToken) return null;
-  const result = await get(pathname, { access: "private", token: blobToken });
+  if (!hasBlob) return null;
+  const result = await get(pathname, { access: "private", ...blobOptions() });
   return result?.statusCode === 200 ? result : null;
 }
 
@@ -129,7 +136,7 @@ class MissingBlobStorageProvider implements StorageProvider {
     const blobVars = Object.keys(process.env).filter((k) => k.includes("BLOB"));
     throw new Error(
       `File storage is not configured: no BLOB_READ_WRITE_TOKEN in the "${process.env.VERCEL_ENV ?? "unknown"}" environment ` +
-        `(Blob-related variables found: ${blobVars.length ? blobVars.join(", ") : "none"}). ` +
+        `or BLOB_STORE_ID (Blob-related variables found: ${blobVars.length ? blobVars.join(", ") : "none"}). ` +
         "Connect a Vercel Blob store to this project for Production and Preview, then redeploy."
     );
   }
@@ -142,8 +149,8 @@ class MissingBlobStorageProvider implements StorageProvider {
   async remove() {}
 }
 
-export const storage: StorageProvider = blobToken
-  ? new BlobStorageProvider(blobToken)
+export const storage: StorageProvider = hasBlob
+  ? new BlobStorageProvider()
   : process.env.VERCEL
     ? new MissingBlobStorageProvider()
     : new LocalStorageProvider();

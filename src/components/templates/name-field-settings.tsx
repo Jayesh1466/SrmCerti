@@ -120,7 +120,7 @@ export function NameFieldSettings({
       <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
       <div className="min-w-0 space-y-5">
         <p className="text-xs text-slate-500">
-          Drag the boxes on the preview to position them &mdash; this position is used for every student when certificates are generated.
+          Drag the boxes on the preview to position them. The same position is used for every student when certificates are generated.
         </p>
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm font-medium">

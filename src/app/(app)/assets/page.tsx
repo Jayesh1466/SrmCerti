@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { uploadFile } from "@/lib/upload-client";
+import { X } from "lucide-react";
 
 interface Asset {
   id: string;
@@ -133,9 +134,10 @@ export default function AssetsPage() {
               <button
                 onClick={() => setConfirmId(a.id)}
                 title="Delete asset"
-                className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-red-600 opacity-70 shadow transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                aria-label="Delete asset"
+                className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-red-600 opacity-80 shadow-sm transition-opacity hover:bg-red-50 group-hover:opacity-100"
               >
-                ✕
+                <X size={14} />
               </button>
             )}
             <div className="flex aspect-square items-center justify-center bg-slate-50 p-2">

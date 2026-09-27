@@ -243,14 +243,14 @@ export function GenerationPanel({ templateId }: { templateId: string }) {
             </Button>
             {job && (
               <div className="space-y-1">
-                <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-3 w-full overflow-hidden rounded bg-slate-100">
                   <div
                     className="h-full bg-slate-900 transition-all"
                     style={{ width: `${job.total ? ((job.completed + job.failed) / job.total) * 100 : 0}%` }}
                   />
                 </div>
                 <p className="text-xs text-slate-500">
-                  {job.completed + job.failed} / {job.total} processed ({job.completed} ok, {job.failed} failed) — {job.status}
+                  {job.completed + job.failed} / {job.total} processed ({job.completed} ok, {job.failed} failed). Status: {job.status}
                 </p>
               </div>
             )}
@@ -277,7 +277,7 @@ export function GenerationPanel({ templateId }: { templateId: string }) {
                     <td className="py-2">{c.studentName}</td>
                     <td>{c.regNumber}</td>
                     <td>
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${c.status === "generated" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{c.status}</span>
+                      <span className={`rounded px-2 py-0.5 text-xs ${c.status === "generated" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{c.status}</span>
                     </td>
                     <td className="space-x-3 py-2 text-right">
                       {c.filePath && <a className="text-blue-600 hover:underline" href={c.filePath} target="_blank" rel="noreferrer">View</a>}

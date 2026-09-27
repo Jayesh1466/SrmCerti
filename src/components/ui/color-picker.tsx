@@ -105,7 +105,7 @@ export function ColorPicker({
                 }}
                 className={cn(
                   "h-7 w-7 rounded-md border transition-transform hover:scale-110",
-                  value?.toLowerCase() === c ? "border-2 border-indigo-600" : "border-slate-200"
+                  value?.toLowerCase() === c ? "border-2 border-brand" : "border-slate-200"
                 )}
                 style={{ backgroundColor: c }}
               />
