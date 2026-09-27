@@ -31,66 +31,52 @@ async function runGeneration(jobId: string, projectId: string, verifyBaseUrl: st
     .filter(({ idx }) => !errorRowIndexes.has(idx));
 
 
+  const templateConfig = {
+    backgroundUrl: template.backgroundPath,
+    pageWidth: template.width,
+    pageHeight: template.height,
+    logos: JSON.parse(template.logos),
+    seals: JSON.parse(template.seals),
+    signatures: JSON.parse(template.signatures),
+    studentNameField: JSON.parse(template.studentNameField),
+    regNumberField: JSON.parse(template.regNumberField),
+    textBlocks: JSON.parse(template.textBlocks),
+    watermark: JSON.parse(template.watermark),
+    qrConfig: JSON.parse(template.qrConfig),
+    verifyBaseUrl,
+  };
+
   let completed = 0;
   let failed = 0;
 
-  for (const { row } of validRows) {
+  // Render + upload one certificate; returns the row to insert (never throws).
+  async function produce(row: ParsedRow) {
     const data = buildRowData(row, mapping);
     const studentName = data.student_name || "Unknown";
     const regNumber = data.registration_number || `NA-${Math.random().toString(36).slice(2, 8)}`;
     const certificateId = generateCertificateId();
-
     try {
-      const pdfBuffer = await generateCertificatePdf({
-        backgroundUrl: template.backgroundPath,
-        pageWidth: template.width,
-        pageHeight: template.height,
-        logos: JSON.parse(template.logos),
-        seals: JSON.parse(template.seals),
-        signatures: JSON.parse(template.signatures),
-        studentNameField: JSON.parse(template.studentNameField),
-        regNumberField: JSON.parse(template.regNumberField),
-        textBlocks: JSON.parse(template.textBlocks),
-        watermark: JSON.parse(template.watermark),
-        qrConfig: JSON.parse(template.qrConfig),
-        data,
-        certificateId,
-        verifyBaseUrl,
-      });
-
+      const pdfBuffer = await generateCertificatePdf({ ...templateConfig, data, certificateId });
       const filename = `${sanitizeFilename(regNumber)}.pdf`;
-      const { url: publicPath } = await storage.saveAt(pdfBuffer, `certificates/${projectId}/${filename}`, "application/pdf");
-
-      await prisma.certificate.create({
-        data: {
-          certificateId,
-          projectId,
-          studentName,
-          regNumber,
-          data: JSON.stringify(data),
-          filePath: publicPath,
-          status: "generated",
-        },
-      });
-      completed++;
+      const { url } = await storage.saveAt(pdfBuffer, `certificates/${projectId}/${filename}`, "application/pdf");
+      return { ok: true, record: { certificateId, projectId, studentName, regNumber, data: JSON.stringify(data), filePath: url, status: "generated" } };
     } catch (err) {
-      await prisma.certificate.create({
-        data: {
-          certificateId,
-          projectId,
-          studentName,
-          regNumber,
-          data: JSON.stringify({ ...data, error: String(err) }),
-          status: "failed",
-        },
-      });
-      failed++;
+      return {
+        ok: false,
+        record: { certificateId, projectId, studentName, regNumber, data: JSON.stringify({ ...data, error: String(err) }), status: "failed" },
+      };
     }
+  }
 
-    await prisma.generationJob.update({
-      where: { id: jobId },
-      data: { completed, failed },
-    });
+  // Certificates are independent, so render/upload several at once (uploads are network-bound and
+  // overlap well), then write each batch's rows and the progress count in one go instead of per row.
+  const CONCURRENCY = 8;
+  for (let i = 0; i < validRows.length; i += CONCURRENCY) {
+    const results = await Promise.all(validRows.slice(i, i + CONCURRENCY).map(({ row }) => produce(row)));
+    await prisma.certificate.createMany({ data: results.map((r) => r.record) });
+    completed += results.filter((r) => r.ok).length;
+    failed += results.filter((r) => !r.ok).length;
+    await prisma.generationJob.update({ where: { id: jobId }, data: { completed, failed } });
   }
 
   await prisma.generationJob.update({

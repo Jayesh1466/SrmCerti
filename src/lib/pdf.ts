@@ -1,8 +1,9 @@
-import { PDFDocument, StandardFonts, rgb, PDFFont, PDFImage } from "pdf-lib";
+import { PDFDocument, PDFPage, StandardFonts, rgb, PDFFont, PDFImage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import path from "path";
 import { promises as fs } from "fs";
 import QRCode from "qrcode";
+import { randomBytes } from "crypto";
 import { readStoredFile } from "@/lib/storage";
 import { substitutePlaceholders, applyCaseTransform } from "@/lib/placeholders";
 import { getFontOption } from "@/lib/fonts";
@@ -37,11 +38,21 @@ async function mapFont(pdfDoc: PDFDocument, family?: string): Promise<PDFFont> {
   if (cached) return cached;
 
   pdfDoc.registerFontkit(fontkit);
-  const fontPath = path.join(process.cwd(), "public", option.file);
-  const fontBytes = await fs.readFile(fontPath);
+  const fontBytes = await loadFontBytes(option.file);
   const embedded = await pdfDoc.embedFont(fontBytes, { subset: true });
   cache.set(option.value, embedded);
   return embedded;
+}
+
+// Font files never change at runtime; read each one from disk once.
+const fontBytesCache = new Map<string, Promise<Buffer>>();
+function loadFontBytes(file: string) {
+  let bytes = fontBytesCache.get(file);
+  if (!bytes) {
+    bytes = fs.readFile(path.join(process.cwd(), "public", file));
+    fontBytesCache.set(file, bytes);
+  }
+  return bytes;
 }
 
 function hexToRgb(hex?: string) {
@@ -111,7 +122,41 @@ export interface GenerateCertificateOptions {
   verifyBaseUrl: string;
 }
 
-export async function generateCertificatePdf(opts: GenerateCertificateOptions): Promise<Buffer> {
+// Everything except the per-student text and QR is identical across a batch, and embedding the
+// background (decoding and re-compressing a large PNG) dominates generation time. So the static layer
+// is rendered once into a "base" PDF and cached; each certificate loads that base (fast: the images
+// are already compressed streams) and only draws its own text and QR code on top.
+type StaticLayer = Pick<
+  GenerateCertificateOptions,
+  "backgroundUrl" | "pageWidth" | "pageHeight" | "logos" | "seals" | "signatures" | "watermark"
+>;
+
+const basePdfCache = new Map<string, Promise<Uint8Array>>();
+const BASE_CACHE_LIMIT = 5;
+
+function getBasePdf(opts: StaticLayer): Promise<Uint8Array> {
+  // Only the static fields: per-student data must not end up in the key, or nothing is ever reused.
+  const layer: StaticLayer = {
+    backgroundUrl: opts.backgroundUrl,
+    pageWidth: opts.pageWidth,
+    pageHeight: opts.pageHeight,
+    logos: opts.logos,
+    seals: opts.seals,
+    signatures: opts.signatures,
+    watermark: opts.watermark,
+  };
+  const key = JSON.stringify(layer);
+  let base = basePdfCache.get(key);
+  if (!base) {
+    base = renderStaticLayer(layer);
+    base.catch(() => basePdfCache.delete(key));
+    if (basePdfCache.size >= BASE_CACHE_LIMIT) basePdfCache.delete(basePdfCache.keys().next().value!);
+    basePdfCache.set(key, base);
+  }
+  return base;
+}
+
+async function renderStaticLayer(opts: StaticLayer): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([opts.pageWidth, opts.pageHeight]);
 
@@ -162,6 +207,32 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
       // skip missing signature asset
     }
   }
+
+  return pdfDoc.save();
+}
+
+// Draw the QR code as vector squares: sharper in print than a PNG, and no image to encode per certificate.
+function drawQrCode(page: PDFPage, text: string, rect: { x: number; y: number; width: number; height: number }) {
+  const qr = QRCode.create(text, { errorCorrectionLevel: "M" });
+  const size = qr.modules.size;
+  const margin = 1;
+  const cells = size + margin * 2;
+  const cell = Math.min(rect.width, rect.height) / cells;
+  // White quiet zone, then one SVG path containing every dark module.
+  page.drawRectangle({ x: rect.x, y: rect.y, width: cell * cells, height: cell * cells, color: rgb(1, 1, 1) });
+  let d = "";
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (qr.modules.get(row, col)) d += `M${col + margin} ${row + margin}h1v1h-1z`;
+    }
+  }
+  // drawSvgPath's y-axis points down from the given origin, matching QR row order.
+  page.drawSvgPath(d, { x: rect.x, y: rect.y + cell * cells, scale: cell, color: rgb(0, 0, 0), borderWidth: 0 });
+}
+
+export async function generateCertificatePdf(opts: GenerateCertificateOptions): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.load(await getBasePdf(opts));
+  const page = pdfDoc.getPage(0);
 
   // Student name field
   if (opts.studentNameField?.enabled && opts.studentNameField.position) {
@@ -220,12 +291,8 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
   // QR code
   if (opts.qrConfig?.enabled) {
     const verifyUrl = `${opts.verifyBaseUrl}/verify/${opts.certificateId}`;
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1 });
-    const qrBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
-    const qrImage = await pdfDoc.embedPng(qrBytes);
     const pos = opts.qrConfig.position || { x: 0.85, y: 0.85, width: 0.1, height: 0.1 };
-    const rect = posToRect(pos, opts.pageWidth, opts.pageHeight);
-    page.drawImage(qrImage, rect);
+    drawQrCode(page, verifyUrl, posToRect(pos, opts.pageWidth, opts.pageHeight));
   }
 
   const bytes = await pdfDoc.save();
@@ -236,7 +303,10 @@ export function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9-_]/g, "_").replace(/_+/g, "_").slice(0, 80) || "certificate";
 }
 
+// Certificate IDs are public (they're in the QR link and open the certificate), so draw them from a
+// cryptographic RNG: 10 characters from a 32-symbol alphabet without look-alikes (0/O, 1/I).
+const ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 export function generateCertificateId(): string {
-  const rand = Math.random().toString(36).slice(2, 10).toUpperCase();
-  return `CERT-${rand}`;
+  const bytes = randomBytes(10);
+  return "CERT-" + Array.from(bytes, (b) => ID_ALPHABET[b % 32]).join("");
 }
