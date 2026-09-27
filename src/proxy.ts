@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { withBrowserSessionCookie } from "@/lib/session-cookie";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/templates", "/assets", "/certificates", "/settings"];
 // API routes that must stay reachable without a session: sign-in itself and public certificate verification (QR codes).
@@ -7,7 +8,7 @@ const PUBLIC_API_PREFIXES = ["/api/auth", "/api/verify"];
 
 const matchesPrefix = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(prefix + "/");
 
-export default auth((req) => {
+const guard = auth((req) => {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api/")) {
@@ -26,6 +27,12 @@ export default auth((req) => {
   }
   return NextResponse.next();
 });
+
+// auth() refreshes the session cookie on each request; keep it a browser-session cookie.
+export default async function proxy(...args: Parameters<typeof guard>) {
+  const res = await guard(...args);
+  return res instanceof Response ? withBrowserSessionCookie(res) : res;
+}
 
 export const config = {
   matcher: [

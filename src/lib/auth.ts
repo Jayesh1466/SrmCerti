@@ -4,7 +4,9 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  // The cookie itself ends with the browser session (see session-cookie.ts); maxAge is a backstop for
+  // browsers that restore session cookies on restart, and is extended while the site is in use.
+  session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   pages: { signIn: "/login" },
   providers: [
     Credentials({
