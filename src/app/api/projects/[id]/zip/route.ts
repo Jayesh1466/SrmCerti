@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { ZipArchive } from "archiver";
 import { readStoredFile } from "@/lib/storage";
 import { PassThrough } from "stream";
+import { certificateFilename } from "@/lib/pdf";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       if (!cert.filePath) continue;
       try {
         const buf = await readStoredFile(cert.filePath);
-        archive.append(buf, { name: `${cert.regNumber.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf` });
+        archive.append(buf, { name: certificateFilename(cert) });
       } catch {
         // skip unreadable file
       }

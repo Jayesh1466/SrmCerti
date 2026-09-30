@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateCertificatePdf, sanitizeFilename, generateCertificateId } from "@/lib/pdf";
+import { generateCertificatePdf, certificateFilename, generateCertificateId } from "@/lib/pdf";
 import { storage } from "@/lib/storage";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       verifyBaseUrl: req.nextUrl.origin,
     });
 
-    const filename = `${sanitizeFilename(cert.regNumber)}.pdf`;
+    const filename = certificateFilename(cert);
     const { url: publicPath } = await storage.saveAt(pdfBuffer, `certificates/${cert.projectId}/${filename}`, "application/pdf");
 
     const updated = await prisma.certificate.update({

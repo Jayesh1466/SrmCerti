@@ -250,7 +250,7 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
   }
 
   // Registration number field
-  if (opts.regNumberField?.enabled && opts.regNumberField.position) {
+  if (opts.regNumberField?.enabled && opts.regNumberField.position && opts.data.registration_number?.trim()) {
     const font = await mapFont(pdfDoc, opts.regNumberField.fontFamily);
     const rect = posToRect(opts.regNumberField.position, opts.pageWidth, opts.pageHeight);
     const format = opts.regNumberField.format || "{{registration_number}}";
@@ -297,6 +297,12 @@ export async function generateCertificatePdf(opts: GenerateCertificateOptions): 
 
   const bytes = await pdfDoc.save();
   return Buffer.from(bytes);
+}
+
+// PDF filename for a certificate: the registration number, or name + certificate ID when there is none.
+export function certificateFilename(cert: { regNumber: string; studentName: string; certificateId: string }): string {
+  const base = cert.regNumber.trim() ? cert.regNumber : `${cert.studentName}_${cert.certificateId}`;
+  return `${sanitizeFilename(base)}.pdf`;
 }
 
 export function sanitizeFilename(name: string): string {

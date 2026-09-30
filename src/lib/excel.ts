@@ -107,10 +107,8 @@ export function validateRows(
       errors.push({ rowIndex: idx, reason: "Missing student name" });
       missingCount++;
     }
-    if (!reg || !reg.trim()) {
-      errors.push({ rowIndex: idx, reason: "Missing registration number" });
-      missingCount++;
-    } else {
+    // Registration number is optional; only check duplicates when present.
+    if (reg && reg.trim()) {
       const key = reg.trim().toLowerCase();
       if (seenReg.has(key)) {
         errors.push({ rowIndex: idx, reason: `Duplicate registration number (also row ${seenReg.get(key)! + 1})` });

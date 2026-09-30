@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateCertificatePdf, sanitizeFilename, generateCertificateId } from "@/lib/pdf";
+import { generateCertificatePdf, certificateFilename, generateCertificateId } from "@/lib/pdf";
 import { storage } from "@/lib/storage";
 import { buildRowData } from "@/lib/rowData";
 import type { ParsedRow } from "@/lib/excel";
@@ -53,11 +53,11 @@ async function runGeneration(jobId: string, projectId: string, verifyBaseUrl: st
   async function produce(row: ParsedRow) {
     const data = buildRowData(row, mapping);
     const studentName = data.student_name || "Unknown";
-    const regNumber = data.registration_number || `NA-${Math.random().toString(36).slice(2, 8)}`;
+    const regNumber = data.registration_number?.trim() || "";
     const certificateId = generateCertificateId();
     try {
       const pdfBuffer = await generateCertificatePdf({ ...templateConfig, data, certificateId });
-      const filename = `${sanitizeFilename(regNumber)}.pdf`;
+      const filename = certificateFilename({ regNumber, studentName, certificateId });
       const { url } = await storage.saveAt(pdfBuffer, `certificates/${projectId}/${filename}`, "application/pdf");
       return { ok: true, record: { certificateId, projectId, studentName, regNumber, data: JSON.stringify(data), filePath: url, status: "generated" } };
     } catch (err) {

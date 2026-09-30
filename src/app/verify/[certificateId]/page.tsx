@@ -22,7 +22,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ certifi
             <p className="mb-4 text-sm text-slate-500">This certificate is authentic and was issued by SRM Institute of Science and Technology, Ramapuram.</p>
             <div className="mx-auto max-w-md space-y-2 rounded-md bg-slate-50 p-4 text-left text-sm">
               <Row label="Student Name" value={cert!.studentName} />
-              <Row label="Registration Number" value={cert!.regNumber} />
+              {cert!.regNumber && <Row label="Registration Number" value={cert!.regNumber} />}
               {data.event_name && <Row label="Event" value={data.event_name} />}
               {data.organization && <Row label="Organization" value={data.organization} />}
               {data.date && <Row label="Date" value={data.date} />}

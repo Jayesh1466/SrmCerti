@@ -186,7 +186,7 @@ export function GenerationPanel({ templateId }: { templateId: string }) {
           <CardHeader><CardTitle>2. Column Mapping</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <MappingRow label="Student Name" target="student_name" headers={uploadResult.headers} mapping={mapping} setMapping={setMapping} required />
-            <MappingRow label="Registration Number" target="registration_number" headers={uploadResult.headers} mapping={mapping} setMapping={setMapping} required />
+            <MappingRow label="Registration Number" target="registration_number" headers={uploadResult.headers} mapping={mapping} setMapping={setMapping} />
             {CUSTOM_FIELDS.map((f) => (
               <MappingRow key={f} label={f} target={f} headers={uploadResult.headers} mapping={mapping} setMapping={setMapping} />
             ))}
