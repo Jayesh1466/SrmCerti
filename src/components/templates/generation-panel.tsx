@@ -280,7 +280,7 @@ export function GenerationPanel({ templateId }: { templateId: string }) {
                       <span className={`rounded px-2 py-0.5 text-xs ${c.status === "generated" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{c.status}</span>
                     </td>
                     <td className="space-x-3 py-2 text-right">
-                      {c.filePath && <a className="text-blue-600 hover:underline" href={c.filePath} target="_blank" rel="noreferrer">View</a>}
+                      {c.filePath && <a className="text-blue-600 hover:underline" href={`/api/verify/${encodeURIComponent(c.certificateId)}/pdf`} target="_blank" rel="noreferrer">View</a>}
                       <button className="text-slate-600 hover:underline" onClick={() => handleRegenerate(c.id)}>Regenerate</button>
                     </td>
                   </tr>

@@ -40,7 +40,7 @@ export default async function CertificatesPage() {
                     <span className={`rounded px-2 py-0.5 text-xs ${c.status === "generated" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{c.status}</span>
                   </td>
                   <td className="space-x-3 p-3 text-right">
-                    {c.filePath && <a className="text-blue-600 hover:underline" href={c.filePath} target="_blank" rel="noreferrer">Download</a>}
+                    {c.filePath && <a className="text-blue-600 hover:underline" href={`/api/verify/${encodeURIComponent(c.certificateId)}/pdf?download`} target="_blank" rel="noreferrer">Download</a>}
                     <a className="text-slate-600 hover:underline" href={`/verify/${c.certificateId}`} target="_blank" rel="noreferrer">Verify</a>
                   </td>
                 </tr>
