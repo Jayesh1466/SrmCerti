@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Pipette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,8 @@ const PRESET_COLORS = [
   "#800020", "#6d28d9", "#4338ca", "#334155", "#ffffff",
 ];
 
+const noopSubscribe = () => () => {};
+
 export function ColorPicker({
   value,
   onChange,
@@ -40,10 +42,19 @@ export function ColorPicker({
   // Open the palette leftwards when there isn't room to its right, so it never gets clipped.
   const [alignRight, setAlignRight] = useState(false);
   const [hexInput, setHexInput] = useState(value || "#000000");
-  const [eyeDropperSupported, setEyeDropperSupported] = useState(false);
+  // Keep the hex field in sync when the value changes from outside.
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setHexInput(value || "#000000");
+  }
+  // false on the server and during hydration, then the real answer on the client.
+  const eyeDropperSupported = useSyncExternalStore(
+    noopSubscribe,
+    () => !!window.EyeDropper,
+    () => false,
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => setEyeDropperSupported(typeof window !== "undefined" && !!window.EyeDropper), []);
 
   async function pickFromScreen() {
     if (!window.EyeDropper) return;
@@ -56,8 +67,6 @@ export function ColorPicker({
       // user cancelled the pick — no-op
     }
   }
-
-  useEffect(() => setHexInput(value || "#000000"), [value]);
 
   useEffect(() => {
     if (!open) return;

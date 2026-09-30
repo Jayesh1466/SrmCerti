@@ -32,8 +32,16 @@ export default function AssetsPage() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    fetch("/api/assets")
+      .then((res) => res.json())
+      .then((data: Asset[]) => {
+        if (!cancelled) setAssets(data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleUpload(file: File) {
     setUploading(true);
