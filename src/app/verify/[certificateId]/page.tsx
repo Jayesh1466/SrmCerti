@@ -19,7 +19,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ certifi
           <>
             <CheckCircle2 className="mx-auto mb-3 h-14 w-14 text-green-600" />
             <h1 className="text-xl font-bold text-slate-900">Certificate Verified</h1>
-            <p className="mb-4 text-sm text-slate-500">This certificate is authentic and was issued by SRMcerti.</p>
+            <p className="mb-4 text-sm text-slate-500">This certificate is authentic and was issued by SRM Institute of Science and Technology, Ramapuram.</p>
             <div className="mx-auto max-w-md space-y-2 rounded-md bg-slate-50 p-4 text-left text-sm">
               <Row label="Student Name" value={cert!.studentName} />
               <Row label="Registration Number" value={cert!.regNumber} />
